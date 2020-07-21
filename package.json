@@ -1,0 +1,18 @@
+{
+  "name": "filebot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "alt.js",
+  "dependencies": {
+    "discord.js": "^12.2.0",
+    "request": "^2.88.2",
+    "rimraf": "^3.0.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
