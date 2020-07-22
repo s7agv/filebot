@@ -12,14 +12,21 @@ General use Discord bot for remote server file management. I run it on a Raspber
 
 ### Command list
 
-`ls`
-`sh` (execute linux command)
-`newmusic`
-`mkdir`
-`rename`
-`upload`
-`retrieve`
-`rm`
+- `ls`
+- `sh` (execute linux command)
+- `newmusic`
+- `mkdir`
+- `rename`
+- `upload`
+- `retrieve`
+- `rm`
+
+#### BETA
+
+All of these have basically no edge-case protection right now. Use carefully.
+
+- `newcmd/newcommand` adds new user-made command.
+- `delcmd/delcommand/deletecommand/deletecmd` deletes user-made command.
 
 ## License
 
