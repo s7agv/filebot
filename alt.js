@@ -170,6 +170,94 @@ client.on("message", (message) => {
                 message.channel.send(`Error renaming ${oldPath}.`);
             }
         }
+        
+        //new user command
+        if(cmd===`${prefix}newcmd` || cmd===`${prefix}newcommand`){
+            const numFilter = m => !isNaN(m.content);
+            const nonFilter = m => m.content!=undefined;
+            let nCmdName;
+            let nCmd;
+            let nCmdArg;
+            message.channel.send("Number of args?").then(function(){
+                message.channel.awaitMessages(numFilter, { max: 1, time: 60000, errors: ['time'] })
+                .then(function(collected){
+                    nCmdArg = collected.first().content;
+                    message.channel.send("Shell command? use `~arg[number]~` for arguments.").then(function(){
+                        message.channel.awaitMessages(nonFilter, { max: 1, time: 60000, errors: ['time'] })
+                        .then(function(collected){
+                            nCmd = collected.first().content.replace(/"/g,'\\"');
+                            message.channel.send("Command name?").then(function(){
+                                message.channel.awaitMessages(nonFilter, { max: 1, time: 60000, errors: ['time'] })
+                                .then(function(collected){
+                                    nCmdName = collected.first().content;
+
+                                    let commands = JSON.parse(fs.readFileSync("./uCommands.json", "utf8"));
+        
+                                    commands[nCmdName] = {
+                                        args: nCmdArg,
+                                        exec: nCmd
+                                    };
+
+                                    try {
+                                        fs.writeFileSync("./uCommands.json", JSON.stringify(commands));
+                                        message.channel.send(`Added ${nCmdName} command.`);
+                                    } catch (err) {
+                                        message.channel.send(`ERROR: Cannot write to uCommands.json.`);
+                                    }
+
+                                }).catch(collected => collected.first().channel.send("Timeout error"));
+                            });
+                        }).catch(collected => collected.first().channel.send("Timeout error"));
+                    });
+                }).catch(collected => collected.first().channel.send("Timeout error"));
+            });
+        }
+
+        //delete user made cmd
+        if(cmd===`${prefix}delcmd` || cmd===`${prefix}deletecmd` || cmd===`${prefix}deletecommand` || cmd===`${prefix}delcommand`){
+            if(JSON.parse(fs.readFileSync("./uCommands.json", "utf8"))[args[0]]){
+                let commands = JSON.parse(fs.readFileSync("./uCommands.json", "utf8"));
+                delete commands[args[0]];
+                try {
+                    fs.writeFileSync("./uCommands.json", JSON.stringify(commands));
+                    message.channel.send(`Removed ${args[0]} command.`);
+                } catch (err) {
+                    message.channel.send(`ERROR: Cannot write to uCommands.json.`);
+                }
+            } else {
+                message.channel.send("Command does not exist");
+            }
+        }
+
+        if (cmd===`${prefix}cmdlist`){
+            let str = "```";
+            let commands = JSON.parse(fs.readFileSync("./uCommands.json", "utf8"));
+            for (i in commands){
+                str+=`${i}:\n\t${commands[i].exec}`;
+            }
+            str+="```";
+            message.channel.send(str);
+        }
+
+
+        //digest user made commands
+        let rawCmd = cmd.replace(prefix, "");
+        if(cmd.startsWith(`${prefix}`) && JSON.parse(fs.readFileSync("./uCommands.json", "utf8"))[`${rawCmd}`]){
+            let commands = JSON.parse(fs.readFileSync("./uCommands.json", "utf8"));
+            let uCmd = commands[`${rawCmd}`];
+            let execCmd = uCmd.exec;
+            for(i=0;i<=uCmd.args;i++){
+                execCmd=execCmd.replace(`~arg${i+1}~`, args[i]);
+            }
+            exec(execCmd, (error, stdout, stderr) => {
+                if (error) {
+                    message.channel.send(`error: ${error.message}`);
+                    return;
+                }
+                if (stderr) message.channel.send(`**WARN:** ${stderr}`);
+                message.channel.send(`${stdout}`);
+            });
+        }
     }
 });
 async function download(url,filepath){
