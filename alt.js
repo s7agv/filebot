@@ -10,23 +10,58 @@ const { exec } = require("child_process");
 client.on("ready", () => {
     console.log("on");
 });
-let prefix = "##";
+let prefix = "==";
 client.on("message", (message) => {
     let args = message.content.split(" ");
     let cmd = args.shift();
+    if (cmd===`${prefix}music`){
+        let url = args[0];
+        message.channel.send(`Initializing download for \`${url}\`...`);
+        exec(`youtube-dl --output "tmp/%(title)s.mp3" --restrict-filenames --get-filename ${url}`, (error, stdout, stderr) => {
+            if (error) {
+                message.channel.send(`**ERROR**: \`\`\`${error.message}\`\`\``);
+                return;
+            }
+            //if (stderr) message.channel.send(`**WARN**: \`\`\`${stderr}\`\`\``);
+            message.channel.send(`Downloading...`);
+            let filename = stdout.replace("\n","");//youtube-dl -f 140 https://youtu.be/cPCLFtxpadE -j | jq .filesize
+            exec(`youtube-dl -f 140 ${url} -j | jq .filesize`, (error, stdout, stderr) => {
+                if (stdout>8000000) {
+                    message.channel.send(`**ERROR**: song too big`);
+                    return;
+                }
+                exec(`youtube-dl -f 140 --output "tmp/%(title)s.mp3" --restrict-filenames ${url}`, (error, stdout, stderr) => {
+                    if (error) {
+                        message.channel.send(`**ERROR**: \`\`\`${error.message}\`\`\``);
+                        return;
+                    }
+                    //if (stderr) message.channel.send(`**WARN**: \`\`\`${stderr}\`\`\``);
+                    if (!fs.existsSync(filename)) return message.channel.send("**ERROR**: something went wrong and the file was not generated, or was misnamed.");
+                    message.channel.send(`Sending mp3...`);
+                    message.channel.send("", {files: [filename]}).then(function(){
+                        fs.unlinkSync(filename);
+                    });
+                });
+            });
+        });
+    }
     if(config.owners.includes(message.author.id)){
         if (cmd === `${prefix}sh`){
             let sh = args.join(" ");
             exec(sh, (error, stdout, stderr) => {
                 if (error) {
-                    message.channel.send(`error: ${error.message}`);
+                    message.channel.send(`**ERROR**: \`\`\`${error.message}\`\`\``);
                     return;
                 }
                 if (stderr) {
-                    message.channel.send(`stderr: ${stderr}`);
+                    message.channel.send(`**WARN**: \`\`\`${stderr}\`\`\``);
                     return;
                 }
-                message.channel.send(`stdout: ${stdout}`);
+                if(stdout==''){
+                    message.channel.send(`☑️`);
+                } else {
+                    message.channel.send(`\`\`\`${stdout}\`\`\``);
+                }
             });
         }
         if (cmd === `${prefix}newmusic`){
@@ -37,8 +72,8 @@ client.on("message", (message) => {
                     message.channel.send(`error: ${error.message}`);
                     return;
                 }
-                if (stderr) message.channel.send(`stderr: ${stderr}`);
-                message.channel.send(`stdout: ${stdout}`);
+                if (stderr) message.channel.send(`**WARN**: \`\`\`${stderr}\`\`\``);
+                message.channel.send(`\`\`\`${stdout}\`\`\``);
             });
         }
         if (cmd === `${prefix}ls`){
@@ -53,18 +88,18 @@ client.on("message", (message) => {
             }
             if(!path){
                 let res = fs.readdirSync(__dirname).join("   ");
-                message.channel.send(res);
+                message.channel.send(`\`\`\`${res}\`\`\``);
             } else {
                 if(fs.existsSync(path)){
                     let res = fs.readdirSync(path).join("  //  ");
                     if (!res||res == "") return message.channel.send("empty path")
-                    if(res.length>2000){
-                        let res0 = res.match(/.{1,2000}/g);
+                    if(res.length>1994){
+                        let res0 = res.match(/.{1,1994}/g);
                         for(i of res0){
-                            message.channel.send(i);
+                            message.channel.send(`\`\`\`${i}\`\`\``);
                         }
                     }else{
-                        message.channel.send(res);
+                        message.channel.send(`\`\`\`${res}\`\`\``);
                     }
                 } else {
                     message.channel.send(`${path} doesn't exist`);
@@ -111,7 +146,7 @@ client.on("message", (message) => {
             }
             let fileUrl = message.attachments.first().url;
             download(fileUrl,filepath).then(function(){
-                message.channel.send(fs.readdirSync(dir));
+                message.channel.send(`${filepath} uploaded`);
             });
         }
         if (cmd === `${prefix}retrieve`){
@@ -233,7 +268,7 @@ client.on("message", (message) => {
             let str = "```";
             let commands = JSON.parse(fs.readFileSync("./uCommands.json", "utf8"));
             for (i in commands){
-                str+=`${i}:\n\t${commands[i].exec}`;
+                str+=`${i}:\n\t${commands[i].exec}\n`;
             }
             str+="```";
             message.channel.send(str);
@@ -251,11 +286,15 @@ client.on("message", (message) => {
             }
             exec(execCmd, (error, stdout, stderr) => {
                 if (error) {
-                    message.channel.send(`error: ${error.message}`);
+                    message.channel.send(`**ERROR**: \`\`\`${error.message}\`\`\``);
                     return;
                 }
-                if (stderr) message.channel.send(`**WARN:** ${stderr}`);
-                message.channel.send(`${stdout}`);
+                if (stderr) message.channel.send(`**WARN**: \`\`\`${stderr}\`\`\``);
+                if(stdout==''){
+                    message.channel.send(`☑️`);
+                } else {
+                    message.channel.send(`\`\`\`${stdout}\`\`\``);
+                }
             });
         }
     }
